@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: demucs-rest-service
+spec:
+  selector:
+    app: demucs-rest
+  ports:
+  - name: demucs-rest
+    port: 5000
+    targetPort: 5000

@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+#
+# Create a deployment ( https://kubernetes.io/docs/concepts/workloads/controllers/deployment/ )
+#
+kind: Deployment
+metadata:
+  name: demucs-rest-deployment
+spec:
+  replicas: 3
+  # The .spec.selector field defines how the Deployment finds which Pods to manage.
+  # In this case, you simply select a label that is defined in the Pod template (app: blog).
+  # However, more sophisticated selection rules are possible,
+  # as long as the Pod template itself satisfies the rule.
+  selector:
+    matchLabels:
+      app: demucs-rest
+  template:
+    metadata:
+      labels:
+        app: demucs-rest
+    spec:
+      containers:
+      - name: demucs-rest
+        image: cvarad/demucs-rest
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        ports:
+        - containerPort: 5000
+        env:
+          - name: MINIO_HOST
+            value: "minio:9000"
+          - name: REDIS_HOST
+            value: "redis"

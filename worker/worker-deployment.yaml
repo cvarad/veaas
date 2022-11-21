@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demucs-worker-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demucs-worker
+  template:
+    metadata:
+      labels:
+        app: demucs-worker
+    spec:
+      containers:
+      - name: demucs-worker
+        image: cvarad/demucs-worker
+        # resources:
+        #   requests:
+        #     cpu: 1000m
+        #     memory: 2048Mi
+        env:
+          - name: MINIO_HOST
+            value: "minio:9000"
+          - name: REDIS_HOST
+            value: "redis"
