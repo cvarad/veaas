@@ -8,8 +8,8 @@
 # To kill the port-forward processes us e.g. "ps augxww | grep port-forward"
 # to identify the processes ids
 #
-kubectl apply -f redis/redis-deployment.yaml
-kubectl apply -f redis/redis-service.yaml
+# kubectl apply -f redis/redis-deployment.yaml
+# kubectl apply -f redis/redis-service.yaml
 
 kubectl apply -f rest/rest-deployment.yaml
 kubectl apply -f rest/rest-service.yaml
