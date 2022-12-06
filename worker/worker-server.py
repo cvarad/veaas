@@ -1,14 +1,19 @@
-import logging
+import asyncio
+import logging 
 import os
 
 from minio import Minio
-from redis import Redis
+from nats.aio.client import Client as NATS
 
-logger = logging.getLogger('werkzeug')
-logger.setLevel(level=logging.ERROR)
+from video_worker import VideoWorker
 
-# Two buckets exist: 1) input-audio, 2) output-separated
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s: %(message)s', level=logging.INFO)
+logger = logging.getLogger('worker-server')
+
+# Two buckets exist: 1) input, 2) output
 minio_host = os.getenv('MINIO_HOST') or 'localhost:9000'
+minio_input_bucket = 'input'
+minio_output_bucket = 'output'
 minio_client = Minio(
     minio_host,
     access_key='rootuser',
@@ -16,22 +21,49 @@ minio_client = Minio(
     secure=False
 )
 
-redis_host = os.getenv('REDIS_HOST') or 'localhost'
-redis_client = Redis(host=redis_host, port=6379, db=0)
+logger.info('minio setup done')
 
-logger.error('minio & redis setup done')
+nats_host = os.getenv('NATS_HOST') or 'localhost'
+nats_queue = os.getenv('NATS_QUEUE') or 'worker'
+nats_subject = 'trim'
 
-while True:
-    _, song_hash = (_bytes.decode() for _bytes in redis_client.blpop('toWorkers'))
-    logger.error(f'Received hash from redis: {song_hash}')
-    minio_client.fget_object('input-audio', song_hash, f'/tmp/{song_hash}.mp3')
-    logger.error('received minio object')
+async def main():
+    # callbacks
+    async def closed_cb():
+        logger.error('NATS connection closed.')
+        await asyncio.sleep(0.1) # Is this needed?
+        asyncio.get_running_loop().stop()
 
-    # run demucs
-    os.system(f'python3 -m demucs.separate --out /tmp/output /tmp/{song_hash}.mp3 --mp3')
-    logger.error('done running python command')
+    async def disconnected_cb():
+        logger.info('Disconnected from NATS')
 
-    # upload separated files to minio
-    for part in ('bass', 'drums', 'vocals', 'other'):
-        logger.error(f'trying to upload {part}')
-        minio_client.fput_object('output-separated', f'{song_hash}/{part}.mp3', f'/tmp/output/mdx_extra_q/{song_hash}/{part}.mp3')
+    async def reconnected_cb():
+        logger.info('Reconnected to NATS')
+
+    # connect to NATS
+    nc = NATS()
+    await nc.connect(nats_host, 
+                     closed_cb=closed_cb,
+                     disconnected_cb=disconnected_cb,
+                     reconnected_cb=reconnected_cb)
+    logger.info(f'Connected to NATS at {nc.connected_url.netloc}')
+
+    # subscribe to nats_subject on the nats_queue
+    sub = await nc.subscribe(nats_subject, nats_queue)
+
+    while True:
+        # indefinitely wait for a message
+        msg = await sub.next_msg(None)
+        subject, video_hash = msg.subject, msg.data.decode()
+        logger.info(f'{subject}: {video_hash}')
+        if subject == nats_subject:
+            vw = VideoWorker(minio_client, minio_input_bucket, minio_output_bucket)
+            vw.fetch_video(video_hash)
+            vw.process_video()
+            vw.put_video()
+
+if __name__ == '__main__':
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        logger.error(e)

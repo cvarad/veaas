@@ -2,9 +2,9 @@ VERSION=v1
 DOCKERUSER=cvarad
 
 build:
-	docker build -f Dockerfile -t demucs-worker .
+	docker build -f Dockerfile -t veaas-worker .
 push:
-	docker tag demucs-worker $(DOCKERUSER)/demucs-worker:$(VERSION)
-	docker push $(DOCKERUSER)/demucs-worker:$(VERSION)
-	docker tag demucs-worker $(DOCKERUSER)/demucs-worker:latest
-	docker push $(DOCKERUSER)/demucs-worker:latest
+	docker tag veaas-worker $(DOCKERUSER)/veaas-worker:$(VERSION)
+	docker push $(DOCKERUSER)/veaas-worker:$(VERSION)
+	docker tag veaas-worker $(DOCKERUSER)/veaas-worker:latest
+	docker push $(DOCKERUSER)/veaas-worker:latest
