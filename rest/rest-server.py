@@ -9,8 +9,10 @@ from minio import Minio
 
 app = Flask(__name__)
 
-# Connecting to MINIO server
+# Two buckets exist: 1) input, 2) output
 minio_host = os.getenv('MINIO_HOST') or 'localhost:9000'
+minio_input_bucket = 'input'
+minio_output_bucket = 'output'
 minio_client = Minio(
     minio_host,
     access_key='rootuser',
@@ -18,18 +20,15 @@ minio_client = Minio(
     secure=False
 )
 
-# Defining 2 MINIO buckets to store input and output/procesed videos respectively
-INPUT_BUCKET = "input-videos"
-OUTPUT_BUCKET = "output-videos"
-
-# Defining 1 NATS queue to sub-pub operation requests between REST and worker
-WORKER_QUEUE = "toWorker"
+nats_host = os.getenv('NATS_HOST') or 'localhost'
+nats_queue = os.getenv('NATS_QUEUE') or 'worker'
+nats_subject = 'trim'
 
 # Initializing empty MINIO buckets if necessary
-if not minio_client.bucket_exists(INPUT_BUCKET):
-    minio_client.make_bucket(INPUT_BUCKET)
-if not minio_client.bucket_exists(OUTPUT_BUCKET):
-    minio_client.make_bucket(OUTPUT_BUCKET) 
+if not minio_client.bucket_exists(minio_input_bucket):
+    minio_client.make_bucket(minio_input_bucket)
+if not minio_client.bucket_exists(minio_output_bucket):
+    minio_client.make_bucket(minio_output_bucket)
 
 @app.route('/', methods=['GET'])
 def root():
@@ -46,11 +45,11 @@ async def trim():
 
     video_hash = hashlib.md5(mp4).hexdigest()
 
-    minio_client.put_object(INPUT_BUCKET, f'input_{video_hash}.mp4', io.BytesIO(mp4), len(mp4))
+    minio_client.put_object(minio_input_bucket, video_hash, io.BytesIO(mp4), len(mp4))
     
-    nc = await nats.connect("localhost:4222") # TODO: Move NATS connection to global?
-    message = (video_hash, "trim", (start, end))
-    await nc.publish("toWorkers", bytearray(str(message), 'utf-8'))
+    nc = await nats.connect(nats_host) # TODO: Move NATS connection to global?
+    message = video_hash
+    await nc.publish(nats_subject, message.encode())
     await nc.close()
 
     return { 'hash': video_hash }

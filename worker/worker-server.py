@@ -1,16 +1,21 @@
-import logging
+import asyncio
+import logging 
 import os
 import asyncio
 import nats
 import ffmpeg
 from minio import Minio
+from nats.aio.client import Client as NATS
 
-# Setting up logger
-logger = logging.getLogger('werkzeug')
-logger.setLevel(level=logging.ERROR)
+from video_worker import VideoWorker
 
-# Connecting to MINIO server
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s: %(message)s', level=logging.INFO)
+logger = logging.getLogger('worker-server')
+
+# Two buckets exist: 1) input, 2) output
 minio_host = os.getenv('MINIO_HOST') or 'localhost:9000'
+minio_input_bucket = 'input'
+minio_output_bucket = 'output'
 minio_client = Minio(
     minio_host,
     access_key='rootuser',
@@ -18,59 +23,49 @@ minio_client = Minio(
     secure=False
 )
 
-# Defining 2 MINIO buckets to store input and output/procesed videos respectively
-INPUT_BUCKET = "input-videos"
-OUTPUT_BUCKET = "output-videos"
+logger.info('minio setup done')
 
-# Defining 1 NATS queue to sub-pub operation requests between REST and worker
-WORKER_QUEUE = "toWorker"
+nats_host = os.getenv('NATS_HOST') or 'localhost'
+nats_queue = os.getenv('NATS_QUEUE') or 'worker'
+nats_subject = 'trim'
 
-logger.error('minio & redis setup done')
+async def main():
+    # callbacks
+    async def closed_cb():
+        logger.error('NATS connection closed.')
+        await asyncio.sleep(0.1) # Is this needed?
+        asyncio.get_running_loop().stop()
 
-# Defining worker that runs inifinitely on loop in the background
-async def main(loop):
-    # Connecting to NATS
-    nc = await nats.connect("localhost:4222")
+    async def disconnected_cb():
+        logger.info('Disconnected from NATS')
 
-    async def message_handler(msg):
-        # Handling NATS WORKER_QUEUE messages
-        logger.error(f'Received message from NATS: {msg}')
+    async def reconnected_cb():
+        logger.info('Reconnected to NATS')
 
-        message = eval(msg.data.decode())
-        video_hash, operation, params = message
-        logger.error(f'Extracted hash and operation from NATS message: {video_hash}, {operation}')
+    # connect to NATS
+    nc = NATS()
+    await nc.connect(nats_host, 
+                     closed_cb=closed_cb,
+                     disconnected_cb=disconnected_cb,
+                     reconnected_cb=reconnected_cb)
+    logger.info(f'Connected to NATS at {nc.connected_url.netloc}')
 
-        # Fetching input video from MINIO INPUT_BUCKET
-        logger.error(f'Downloading input_{video_hash}.mp4 from Minio {INPUT_BUCKET} bucket')
-        minio_client.fget_object(INPUT_BUCKET, f'input_{video_hash}.mp4', f'/tmp/input_{video_hash}.mp4')
-        logger.error(f'Downloaded input_{video_hash}.mp4')
+    # subscribe to nats_subject on the nats_queue
+    sub = await nc.subscribe(nats_subject, nats_queue)
 
-        # Performing user requested operation
-        logger.error(f'Performing {operation} operation on input_{video_hash}.mp4')
-        if operation == 'trim':
-            start, end = params
-            ffmpeg\
-                .input(f'/tmp/input_{video_hash}.mp4')\
-                .trim(start=start, end=end)\
-                .setpts ('PTS-STARTPTS')\
-                .output(f'/tmp/output_{video_hash}.mp4')\
-                .run(overwrite_output=True)
-        logger.error(f'Stored {operation} video at /tmp/output_{video_hash}.mp4')
-
-        # Storing output video in MINIO OUTPUT_BUCKET
-        logger.error(f'Uploading /tmp/output_{video_hash}.mp4 to Minio {OUTPUT_BUCKET} bucket')
-        minio_client.fput_object(OUTPUT_BUCKET, f'output_{video_hash}.mp4', f'/tmp/output_{video_hash}.mp4')
-        logger.error(f'Uploaded /tmp/output_{video_hash}.mp4')
-
-        # Deleting input video from MINIO INPUT_BUCKET
-        logger.error(f'Deleting input_{video_hash}.mp4 from Minio {INPUT_BUCKET} bucket')
-        minio_client.remove_object(INPUT_BUCKET, f'input_{video_hash}.mp4') # TODO: Remove this to retain input videos for future operations
-        logger.error(f'Deleted input_{video_hash}.mp4')
-
-    await nc.subscribe("toWorkers", cb=message_handler)
+    while True:
+        # indefinitely wait for a message
+        msg = await sub.next_msg(None)
+        subject, video_hash = msg.subject, msg.data.decode()
+        logger.info(f'{subject}: {video_hash}')
+        if subject == nats_subject:
+            vw = VideoWorker(minio_client, minio_input_bucket, minio_output_bucket)
+            vw.fetch_video(video_hash)
+            vw.process_video()
+            vw.put_video()
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(loop))
-    loop.run_forever()
-    loop.close()
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        logger.error(e)

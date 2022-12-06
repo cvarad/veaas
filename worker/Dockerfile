@@ -1,7 +1,8 @@
-FROM xserrat/facebook-demucs
+FROM python:3.8-alpine
 
-RUN pip3 install --upgrade redis minio
-RUN mkdir -p /worker /tmp/output
+RUN apk add ffmpeg
+RUN pip3 install --upgrade minio ffmpeg-python nats-py
+RUN mkdir -p /worker
 
-COPY worker-server.py /worker
+COPY worker-server.py video_worker.py /worker/
 ENTRYPOINT ["python3", "/worker/worker-server.py"]
