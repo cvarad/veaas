@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import ffmpeg
 import logging
+import os
 
 from minio import Minio
 
@@ -28,3 +29,5 @@ class VideoWorker:
 
     def put_video(self):
         self.minio.fput_object(self.out_bucket, self.video_hash, self.out_path)
+        os.remove(self.file_path)
+        os.remove(self.out_path)
