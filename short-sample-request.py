@@ -9,9 +9,9 @@ import glob
 
 
 #
-# Use localhost & port 5001 if not specified by environment variable REST
+# Use localhost & port 5000 if not specified by environment variable REST
 #
-REST = os.getenv("REST") or "localhost:5001"
+REST = os.getenv("REST") or "localhost:5000"
 
 ##
 # The following routine makes a JSON REST query of the specified type
@@ -41,8 +41,6 @@ for mp4 in glob.glob("worker/*mp4"):
     mkReq(requests.post, "apiv1/trim",
         data={
             "mp4": base64.b64encode( open(mp4, "rb").read() ).decode('utf-8'),
-            "start": 3,
-            "end": 6,
         },
         verbose=True
         )

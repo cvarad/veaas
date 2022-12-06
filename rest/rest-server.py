@@ -40,8 +40,6 @@ async def trim():
     # Handling request data
     data: dict = request.json or {}
     mp4 = base64.b64decode(data.get('mp4', ''))
-    start = data.get("start", 0)
-    end = data.get("end", 0) # TODO: Determine appropriate default value
 
     video_hash = hashlib.md5(mp4).hexdigest()
 
@@ -54,4 +52,4 @@ async def trim():
 
     return { 'hash': video_hash }
 
-app.run(host="0.0.0.0", port=5001, debug=True)
+app.run(host="0.0.0.0", port=5000)
