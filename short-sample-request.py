@@ -23,7 +23,7 @@ def mkReq(reqmethod, endpoint, data, verbose=True):
     jsonData = jsonpickle.encode(data)
     if verbose and data != None:
         print(f"Make request http://{REST}/{endpoint} with json {data.keys()}")
-        print(f"mp3 is of type {type(data['mp3'])} and length {len(data['mp3'])} ")
+        print(f"mp4 is of type {type(data['mp4'])} and length {len(data['mp4'])} ")
     response = reqmethod(f"http://{REST}/{endpoint}", data=jsonData,
                          headers={'Content-type': 'application/json'})
     if response.status_code == 200:
@@ -36,20 +36,13 @@ def mkReq(reqmethod, endpoint, data, verbose=True):
         return response.text
 
 
-for mp3 in glob.glob("data/short*mp3"):
-    print(f"Separate data/{mp3}")
-    mkReq(requests.post, "apiv1/separate",
+for mp4 in glob.glob("worker/*mp4"):
+    print(f"Separate data/{mp4}")
+    mkReq(requests.post, "apiv1/trim",
         data={
-            "mp3": base64.b64encode( open(mp3, "rb").read() ).decode('utf-8'),
-            "callback": {
-                "url": "http://localhost:5000",
-                "data": {"mp3": mp3, 
-                         "data": "to be returned"}
-            }
+            "mp4": base64.b64encode( open(mp4, "rb").read() ).decode('utf-8'),
         },
         verbose=True
         )
-    print(f"Cache from server is")
-    mkReq(requests.get, "apiv1/queue", data=None)
 
 sys.exit(0)

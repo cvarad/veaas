@@ -24,8 +24,9 @@ class VideoWorker:
         self.out_path = f'/tmp/{self.video_hash}_out.mp4'
         ffmpeg.input(self.file_path)\
             .trim(start=1, end=3)\
+            .setpts ('PTS-STARTPTS')\
             .output(self.out_path)\
-            .run()
+            .run(overwrite_output=True)
 
     def put_video(self):
         self.minio.fput_object(self.out_bucket, self.video_hash, self.out_path)

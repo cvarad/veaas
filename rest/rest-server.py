@@ -2,16 +2,17 @@ import base64
 import hashlib
 import io
 import os
-
+import asyncio
+import nats
 from flask import Flask, request, send_file
-
 from minio import Minio
-from redis import Redis
 
 app = Flask(__name__)
 
-# Two buckets exist: 1) input-audio, 2) output-separated
+# Two buckets exist: 1) input, 2) output
 minio_host = os.getenv('MINIO_HOST') or 'localhost:9000'
+minio_input_bucket = 'input'
+minio_output_bucket = 'output'
 minio_client = Minio(
     minio_host,
     access_key='rootuser',
@@ -19,52 +20,36 @@ minio_client = Minio(
     secure=False
 )
 
-redis_host = os.getenv('REDIS_HOST') or 'localhost'
-redis_client = Redis(host=redis_host, port=6379, db=0)
+nats_host = os.getenv('NATS_HOST') or 'localhost'
+nats_queue = os.getenv('NATS_QUEUE') or 'worker'
+nats_subject = 'trim'
+
+# Initializing empty MINIO buckets if necessary
+if not minio_client.bucket_exists(minio_input_bucket):
+    minio_client.make_bucket(minio_input_bucket)
+if not minio_client.bucket_exists(minio_output_bucket):
+    minio_client.make_bucket(minio_output_bucket)
 
 @app.route('/', methods=['GET'])
 def root():
     return 'Use the /apiv1/ API'
 
-@app.route('/apiv1/separate', methods=['POST'])
-def separate():
-    data: dict = request.json or {'mp3': ''}
-    mp3 = base64.b64decode(data['mp3'] or '')
-    song_hash = hashlib.md5(mp3).hexdigest()
+# Defining /apiv1/trim API
+@app.route('/apiv1/trim', methods=['POST'])
+async def trim():
+    # Handling request data
+    data: dict = request.json or {}
+    mp4 = base64.b64decode(data.get('mp4', ''))
 
-    minio_client.put_object('input-audio', song_hash, io.BytesIO(mp3), len(mp3))
-    redis_client.rpush('toWorkers', song_hash)
+    video_hash = hashlib.md5(mp4).hexdigest()
 
-    return { 'hash': song_hash }
+    minio_client.put_object(minio_input_bucket, video_hash, io.BytesIO(mp4), len(mp4))
+    
+    nc = await nats.connect(nats_host) # TODO: Move NATS connection to global?
+    message = video_hash
+    await nc.publish(nats_subject, message.encode())
+    await nc.close()
 
-@app.route('/apiv1/queue', methods=['GET'])
-def queue():
-    q = redis_client.lrange('toWorkers', 0, -1)
-    return {
-        'queue': [h.decode() for h in q]
-    }
-
-@app.route('/apiv1/track/<song_hash>/<track>', methods=['GET'])
-def track(song_hash, track):
-    bucket_name, object_name = 'output-separated', f'{song_hash}/{track}'
-    try:
-        minio_client.stat_object(bucket_name, object_name)
-    except Exception:
-        return { 'status': 'unavailable', 'reason': 'file not found' }
-
-    with minio_client.get_object(bucket_name, object_name) as response:
-        song_bytes = io.BytesIO(response.read())
-    return send_file(song_bytes, 'audio/mpeg')
-
-@app.route('/apiv1/remove/<song_hash>/<track>', methods=['GET'])
-def remove(song_hash, track):
-    bucket_name, object_name = 'output-separated', f'{song_hash}/{track}'
-    try:
-        minio_client.stat_object(bucket_name, object_name)
-    except Exception:
-        return { 'status': 'unsuccessful', 'reason': 'file not found' }
-
-    minio_client.remove_object(bucket_name, object_name)
-    return { 'status': 'successful', 'reason': f'track {track} deleted' }
+    return { 'hash': video_hash }
 
 app.run(host="0.0.0.0", port=5000)
