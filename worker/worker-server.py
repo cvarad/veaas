@@ -1,9 +1,6 @@
 import asyncio
 import logging 
 import os
-import asyncio
-import nats
-import ffmpeg
 from minio import Minio
 from nats.aio.client import Client as NATS
 
