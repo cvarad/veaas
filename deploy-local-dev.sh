@@ -9,11 +9,12 @@
 # to identify the processes ids
 #
 
-# kubectl apply -f rest/rest-deployment.yaml
-# kubectl apply -f rest/rest-service.yaml
-# kubectl apply -f logs/logs-deployment.yaml
+kubectl apply -f rest/rest-ingress.yaml
+kubectl apply -f rest/rest-service.yaml
+kubectl apply -f rest/rest-deployment.yaml
+kubectl apply -f logs/logs-deployment.yaml
 kubectl apply -f worker/worker-deployment.yaml
-kubectl apply -f minio/minio-external-service.yaml
+# kubectl apply -f minio/minio-external-service.yaml
 
 
 # If you're using minio from the kubernetes tutorial this will forward those

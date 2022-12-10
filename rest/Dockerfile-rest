@@ -1,6 +1,6 @@
 FROM python:3.8-alpine
 
-RUN pip3 install --upgrade redis flask minio
+RUN pip3 install --upgrade minio nats-py "flask[async]"
 RUN mkdir /app
 
 COPY rest-server.py /app

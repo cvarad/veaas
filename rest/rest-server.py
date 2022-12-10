@@ -26,6 +26,8 @@ nats_queue = os.getenv('NATS_QUEUE') or 'worker'
 nats_subject = 'trim'
 nats_logs_subject = 'logs'
 
+rest_port = os.getenv('REST_PORT') or 5000
+
 
 # Initializing empty MINIO buckets if necessary
 if not minio_client.bucket_exists(minio_input_bucket):
@@ -92,4 +94,4 @@ def remove(video_hash):
     return { 'status': 'successful', 'reason': f'video {video_hash} deleted' }
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5001)
+    app.run(host="0.0.0.0", port=int(rest_port))

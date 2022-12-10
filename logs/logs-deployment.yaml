@@ -14,13 +14,11 @@ spec:
     spec:
       containers:
       - name: logs
-        image: dirkcgrunwald/demucs-logs:v9
+        image: hunarjain09/logs:v1
         resources:
           requests:
             cpu: 100m
             memory: 100Mi
         env:
-        - name: REDIS_HOST
-          value: "redis"
-        - name: REDIS_PORT
-          value: "6379"
+          - name: NATS_HOST
+            value: "my-nats"

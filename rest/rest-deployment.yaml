@@ -4,7 +4,7 @@ apiVersion: apps/v1
 #
 kind: Deployment
 metadata:
-  name: demucs-rest-deployment
+  name: rest-deployment
 spec:
   replicas: 3
   # The .spec.selector field defines how the Deployment finds which Pods to manage.
@@ -13,15 +13,15 @@ spec:
   # as long as the Pod template itself satisfies the rule.
   selector:
     matchLabels:
-      app: demucs-rest
+      app: rest
   template:
     metadata:
       labels:
-        app: demucs-rest
+        app: rest
     spec:
       containers:
-      - name: demucs-rest
-        image: cvarad/demucs-rest
+      - name: rest
+        image: hunarjain09/rest
         resources:
           requests:
             cpu: 100m
@@ -31,5 +31,8 @@ spec:
         env:
           - name: MINIO_HOST
             value: "minio:9000"
-          - name: REDIS_HOST
-            value: "redis"
+          - name: NATS_HOST
+            value: "my-nats"
+          - name: REST_PORT
+            value: "5000"
+          

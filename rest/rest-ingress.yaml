@@ -25,6 +25,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: demucs-rest-service
+            name: rest-service
             port:
               number: 5000

@@ -1,7 +1,6 @@
-FROM python:3.6-alpine
-LABEL MAINTAINER="PUT YOUR EMAIL HERE"
+FROM python:3.8-alpine
 
-RUN  pip3 install redis
+RUN pip3 install --upgrade nats-py
 
 WORKDIR /srv
 COPY    logs.py /srv

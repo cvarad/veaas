@@ -1,5 +1,5 @@
 VERSION=v1
-DOCKERUSER=PUT_YOUR_DOCKER_ID_HERE
+DOCKERUSER=hunarjain09
 
 #
 # You should probably update the docker.io user if you update this
@@ -14,7 +14,7 @@ build:
 # hub.docker.io
 #
 push:
-	docker tag logs  $(DOCKERUSER)/demucs-logs:$(VERSION)
-	docker push $(DOCKERUSER)/demucs-logs:$(VERSION)
-	docker tag logs  $(DOCKERUSER)/demucs-logs:latest
-	docker push $(DOCKERUSER)/demucs-logs:latest
+	docker tag logs  $(DOCKERUSER)/logs:$(VERSION)
+	docker push $(DOCKERUSER)/logs:$(VERSION)
+	docker tag logs  $(DOCKERUSER)/logs:latest
+	docker push $(DOCKERUSER)/logs:latest
