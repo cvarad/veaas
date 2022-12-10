@@ -55,7 +55,6 @@ sys.exit(0)
 
 ## TODO
 '''
-0. Containerize everything
 1. GKE
 2. More features
 3. Video
