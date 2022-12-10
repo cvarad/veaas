@@ -41,10 +41,9 @@ for mp4 in glob.glob("worker/*mp4"):
     mkReq(requests.post, "apiv1/operation",
         data={
             "mp4": base64.b64encode( open(mp4, "rb").read() ).decode('utf-8'),
-            'operation':'trim',
+            'operation':'hflip',
             'operation_args':{
-                'start_time': 1,
-                'end_time': 5
+                
                 }
         },
         verbose=True
