@@ -16,6 +16,8 @@ nats_logs_subject = 'logs'
 
 nc = None
 
+## Minio will call end-point (/done) --> Flask (/done)
+## Flask (/event) --> front-end
 
 async def main():
     # callbacks
@@ -43,12 +45,12 @@ async def main():
     while True:
         try:
             msg = await sub.next_msg(None)
-            subject, video_hash = msg.subject, msg.data.decode()
+            subject, message = msg.subject, msg.data.decode()
             ## Work will be a tuple. work[0] is the name of the key from which the data is retrieved
             ## and work[1] will be the text log message. The message content is in raw bytes format
             ## e.g. b'foo' and the decoding it into UTF-* makes it print in a nice manner.
             ##
-            print(f'{subject}: {video_hash}')
+            print(f'{subject}: {message}')
         except Exception as exp:
             print(f"Exception raised in log loop: {str(exp)}")
         sys.stdout.flush()

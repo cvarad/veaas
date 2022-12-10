@@ -3,7 +3,7 @@ import logging
 import os
 from minio import Minio
 from nats.aio.client import Client as NATS
-
+import json
 from video_worker import VideoWorker
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s: %(message)s', level=logging.INFO)
@@ -53,12 +53,12 @@ async def main():
     while True:
         # indefinitely wait for a message
         msg = await sub.next_msg(None)
-        subject, video_hash = msg.subject, msg.data.decode()
-        logger.info(f'{subject}: {video_hash}')
+        subject, message = msg.subject, json.loads(msg.data.decode())
+        logger.info(f'{subject}: {message["video_hash"]}')
         if subject == nats_subject:
             vw = VideoWorker(minio_client, minio_input_bucket, minio_output_bucket)
-            vw.fetch_video(video_hash)
-            vw.process_video()
+            vw.fetch_video(message["video_hash"])
+            vw.process_video(message["operation"],message["operation_args"])
             vw.put_video()
 
 if __name__ == '__main__':

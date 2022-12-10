@@ -3,6 +3,7 @@ import hashlib
 import io
 import os
 import asyncio
+import json
 from nats.aio.client import Client as NATS
 from flask import Flask, request, send_file
 from minio import Minio
@@ -23,6 +24,8 @@ minio_client = Minio(
 nats_host = os.getenv('NATS_HOST') or 'localhost'
 nats_queue = os.getenv('NATS_QUEUE') or 'worker'
 nats_subject = 'trim'
+nats_logs_subject = 'logs'
+
 
 # Initializing empty MINIO buckets if necessary
 if not minio_client.bucket_exists(minio_input_bucket):
@@ -42,21 +45,51 @@ async def root():
     return 'Use the /apiv1/ API'
 
 # Defining /apiv1/trim API
-@app.route('/apiv1/trim', methods=['POST'])
+@app.route('/apiv1/operation', methods=['POST'])
 async def trim():
     await init_nats_client()
     # Handling request data
     data: dict = request.json or {}
     mp4 = base64.b64decode(data.get('mp4', ''))
 
-    video_hash = hashlib.md5(mp4).hexdigest()
+    # TODO: Operation and Operation Args Validation
 
+    video_hash = hashlib.md5(mp4).hexdigest()
     minio_client.put_object(minio_input_bucket, video_hash, io.BytesIO(mp4), len(mp4))
+    print(data)
+    message = { 
+                'video_hash':video_hash,
+                'operation': data['operation'],
+                'operation_args': data['operation_args']
+            }
     
-    message = video_hash
-    await nats_client.publish(nats_subject, message.encode())
+    await nats_client.publish(nats_subject, json.dumps(message).encode())
+    await nats_client.publish(nats_logs_subject, json.dumps(message).encode())
 
     return { 'hash': video_hash }
 
+@app.route('/apiv1/video/<video_hash>', methods=['GET'])
+def track(video_hash):
+    bucket_name, object_name = 'output', f'{video_hash}'
+    try:
+        minio_client.stat_object(bucket_name, object_name)
+    except Exception:
+        return { 'status': 'unavailable', 'reason': 'file not found' }
+
+    with minio_client.get_object(bucket_name, object_name) as response:
+        video_bytes = io.BytesIO(response.read())
+    return send_file(video_bytes, 'video/mp4')
+
+@app.route('/apiv1/remove/<video_hash>', methods=['GET'])
+def remove(video_hash):
+    bucket_name, object_name = 'output', f'{video_hash}'
+    try:
+        minio_client.stat_object(bucket_name, object_name)
+    except Exception:
+        return { 'status': 'unsuccessful', 'reason': 'file not found' }
+
+    minio_client.remove_object(bucket_name, object_name)
+    return { 'status': 'successful', 'reason': f'video {video_hash} deleted' }
+
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5001)

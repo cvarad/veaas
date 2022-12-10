@@ -38,13 +38,27 @@ def mkReq(reqmethod, endpoint, data, verbose=True):
 
 for mp4 in glob.glob("worker/*mp4"):
     print(f"Separate data/{mp4}")
-    mkReq(requests.post, "apiv1/trim",
+    mkReq(requests.post, "apiv1/operation",
         data={
             "mp4": base64.b64encode( open(mp4, "rb").read() ).decode('utf-8'),
-            "start_time":1,
-            "end_time":5
+            'operation':'trim',
+            'operation_args':{
+                'start_time': 1,
+                'end_time': 5
+            }
         },
         verbose=True
         )
 
 sys.exit(0)
+
+
+## TODO
+'''
+0. Containerize everything
+1. GKE
+2. More features
+3. Video
+4. PDF
+5. React and Server Sent Events (Aspirational)
+'''

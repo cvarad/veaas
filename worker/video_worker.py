@@ -20,13 +20,14 @@ class VideoWorker:
 
     # Hardcoded trim operation. Need to decide a data format. JSON example:
     # {"operation": "trim", "args": {"start": 1, "end": 4}}
-    def process_video(self):
+    def process_video(self,operation,operation_args):
         self.out_path = f'/tmp/{self.video_hash}_out.mp4'
-        ffmpeg.input(self.file_path)\
-            .trim(start=1, end=3)\
-            .setpts ('PTS-STARTPTS')\
-            .output(self.out_path)\
-            .run(overwrite_output=True)
+        if operation == 'trim':
+            ffmpeg.input(self.file_path)\
+                .trim(start=operation_args['start_time'], end=operation_args['end_time'])\
+                .setpts ('PTS-STARTPTS')\
+                .output(self.out_path)\
+                .run(overwrite_output=True)
 
     def put_video(self):
         self.minio.fput_object(self.out_bucket, self.video_hash, self.out_path)
