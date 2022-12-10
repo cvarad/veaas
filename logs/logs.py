@@ -1,6 +1,7 @@
 import sys
 import os
-import redis
+import asyncio
+from nats.aio.client import Client as NATS
 
 ##
 ## Configure test vs. production
@@ -9,21 +10,52 @@ import redis
 ##
 ## Configure test vs. production
 ##
-redisHost = os.getenv("REDIS_HOST") or "localhost"
-redisPort = os.getenv("REDIS_PORT") or 6379
+nats_host = os.getenv('NATS_HOST') or 'localhost'
+nats_queue = os.getenv('NATS_QUEUE') or 'worker'
+nats_logs_subject = 'logs'
 
-redisClient = redis.StrictRedis(host=redisHost, port=redisPort, db=0)
+nc = None
 
-while True:
-    try:
-        work = redisClient.blpop("logging", timeout=0)
-        ##
-        ## Work will be a tuple. work[0] is the name of the key from which the data is retrieved
-        ## and work[1] will be the text log message. The message content is in raw bytes format
-        ## e.g. b'foo' and the decoding it into UTF-* makes it print in a nice manner.
-        ##
-        print(work[1].decode('utf-8'))
-    except Exception as exp:
-        print(f"Exception raised in log loop: {str(exp)}")
+
+async def main():
+    # callbacks
+    async def closed_cb():
+        print('NATS connection closed.')
+        await asyncio.sleep(0.1) # Is this needed?
+        asyncio.get_running_loop().stop()
+
+    async def disconnected_cb():
+        print('Disconnected from NATS')
+
+    async def reconnected_cb():
+        print('Reconnected to NATS')
+    
+    nc = NATS()
+    await nc.connect(nats_host,
+                     closed_cb=closed_cb,
+                     disconnected_cb=disconnected_cb,
+                     reconnected_cb=reconnected_cb)
+
+    sub = await nc.subscribe(nats_logs_subject, nats_queue)
     sys.stdout.flush()
     sys.stderr.flush()
+    
+    while True:
+        try:
+            msg = await sub.next_msg(None)
+            subject, video_hash = msg.subject, msg.data.decode()
+            ## Work will be a tuple. work[0] is the name of the key from which the data is retrieved
+            ## and work[1] will be the text log message. The message content is in raw bytes format
+            ## e.g. b'foo' and the decoding it into UTF-* makes it print in a nice manner.
+            ##
+            print(f'{subject}: {video_hash}')
+        except Exception as exp:
+            print(f"Exception raised in log loop: {str(exp)}")
+        sys.stdout.flush()
+        sys.stderr.flush()
+
+if __name__ == '__main__':
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        pass
