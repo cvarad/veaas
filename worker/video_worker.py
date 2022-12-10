@@ -20,21 +20,21 @@ class VideoWorker:
 
     # Hardcoded trim operation. Need to decide a data format. JSON example:
     # {"operation": "trim", "args": {"start": 1, "end": 4}}
-    def process_video(self,operation,operation_args):
+    def process_video(self,operations):
         self.out_path = f'/tmp/{self.video_hash}_out.mp4'
         input = ffmpeg.input(self.file_path)
-        if operation == 'trim':
-            input = ffmpeg.trim(input,start=operation_args['start_time'], end=operation_args['end_time'])
-        if operation == 'hflip':
-            input = ffmpeg.hflip(input)
-        if operation == 'vflip':
-            input = ffmpeg.vflip(input)
-        if operation == 'drawbox':
-            color = operation_args['color'] or 'red'
-            thickness = operation_args['color'] or 5
-            input = ffmpeg.drawbox(input,operation_args['x'],operation_args['y'],operation_args['width'],operation_args['height'],
-            color=color,thickness=thickness)
-        
+        for dic in operations:
+            if dic['operation'] == 'trim':
+                input = ffmpeg.trim(input,start=dic['operation_args']['start_time'], end=dic['operation_args']['end_time'])
+            if dic['operation'] == 'hflip':
+                input = ffmpeg.hflip(input)
+            if dic['operation'] == 'vflip':
+                input = ffmpeg.vflip(input)
+            if dic['operation'] == 'drawbox':
+                color = dic['operation_args']['color'] or 'red'
+                thickness = dic['operation_args']['color'] or 5
+                input = ffmpeg.drawbox(input,dic['operation_args']['x'],dic['operation_args']['y'],dic['operation_args']['width'],dic['operation_args']['height'],
+                color=color,thickness=thickness)
         input = ffmpeg.setpts(input,'PTS-STARTPTS')
         input = ffmpeg.output(input,self.out_path)
         ffmpeg.run(input,overwrite_output=True)

@@ -41,10 +41,19 @@ for mp4 in glob.glob("worker/*mp4"):
     mkReq(requests.post, "apiv1/operation",
         data={
             "mp4": base64.b64encode( open(mp4, "rb").read() ).decode('utf-8'),
-            'operation':'hflip',
-            'operation_args':{
-                
+            "operations":[
+                {
+                'operation':'trim',
+                'operation_args':{
+                    'start_time': 1,
+                    'end_time': 5
+                    }
+                },
+                {
+                    'operation':'hflip',
+                    'operation_args':{}
                 }
+            ]
         },
         verbose=True
         )
@@ -55,10 +64,9 @@ sys.exit(0)
 ## TODO
 '''
 1. GKE
-2. More features 
-    Extract Audio
 3. Video
 4. PDF
 5. React and Server Sent Events (Aspirational)
 6. Not using NATS for ACK are we?
+7. Work out on extracting audio
 '''

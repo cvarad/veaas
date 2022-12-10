@@ -1,4 +1,4 @@
-VERSION=v2
+VERSION=v3
 DOCKERUSER=hunarjain09
 
 build:

@@ -61,8 +61,7 @@ async def trim():
     print(data)
     message = { 
                 'video_hash':video_hash,
-                'operation': data['operation'],
-                'operation_args': data['operation_args']
+                'operations': data['operations'],
             }
     
     await nats_client.publish(nats_subject, json.dumps(message).encode())

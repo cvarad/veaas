@@ -58,7 +58,7 @@ async def main():
         if subject == nats_subject:
             vw = VideoWorker(minio_client, minio_input_bucket, minio_output_bucket)
             vw.fetch_video(message["video_hash"])
-            vw.process_video(message["operation"],message["operation_args"])
+            vw.process_video(message["operations"])
             vw.put_video()
 
 if __name__ == '__main__':
