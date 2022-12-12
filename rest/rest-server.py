@@ -8,7 +8,7 @@ from quart import Quart, request, make_response, send_file
 from minio import Minio
 from quart_cors import cors
 
-app = Quart(__name__)
+app = Quart(__name__, static_folder='../frontend/build', static_url_path='/')
 app = cors(app)
 
 # Two buckets exist: 1) input, 2) output
