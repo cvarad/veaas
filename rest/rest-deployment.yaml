@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: rest
-        image: cvarad/rest
+        image: hunarjain09/rest:latest
         resources:
           requests:
             cpu: 100m

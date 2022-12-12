@@ -1,5 +1,6 @@
 venv/
 data/
-
+build/
+rest/build
 __pycache__/
 .idea
