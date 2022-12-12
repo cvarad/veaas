@@ -7,8 +7,10 @@ import json
 from nats.aio.client import Client as NATS
 from flask import Flask, request, send_file
 from minio import Minio
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 # Two buckets exist: 1) input, 2) output
 minio_host = os.getenv('MINIO_HOST') or 'localhost:9000'
@@ -48,11 +50,13 @@ async def root():
 
 # Defining /apiv1/trim API
 @app.route('/apiv1/operation', methods=['POST'])
-async def trim():
+async def operation():
     await init_nats_client()
     # Handling request data
-    data: dict = request.json or {}
-    mp4 = base64.b64decode(data.get('mp4', ''))
+    data = {
+        "operations": json.loads(request.files['operations'].read().decode()),
+    }
+    mp4 = request.files['file'].read()
 
     # TODO: Operation and Operation Args Validation
 

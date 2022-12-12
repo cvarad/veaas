@@ -9,7 +9,7 @@ import glob
 
 
 #
-# Use localhost & port 5000 if not specified by environment variable REST
+# Use localhost & port 5001 if not specified by environment variable REST
 #
 REST = os.getenv("REST") or "localhost:5001"
 
