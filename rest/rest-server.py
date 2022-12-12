@@ -76,7 +76,7 @@ async def operation():
     return { 'hash': video_hash }
 
 @app.route('/apiv1/video/<video_hash>', methods=['GET'])
-def track(video_hash):
+async def track(video_hash):
     bucket_name, object_name = 'output', f'{video_hash}'
     try:
         minio_client.stat_object(bucket_name, object_name)
@@ -85,7 +85,7 @@ def track(video_hash):
 
     with minio_client.get_object(bucket_name, object_name) as response:
         video_bytes = io.BytesIO(response.read())
-    return send_file(video_bytes, 'video/mp4')
+    return await send_file(video_bytes, 'video/mp4')
 
 @app.route('/apiv1/remove/<video_hash>', methods=['GET'])
 def remove(video_hash):
@@ -110,7 +110,7 @@ async def video_ready_event(video_hash):
             break
 
 # Adapted from https://pgjones.gitlab.io/quart/how_to_guides/server_sent_events.html#server-sent-events
-@app.route('/notification/<video_hash>')
+@app.route('/apiv1/notification/<video_hash>')
 async def notification(video_hash):
     response = await make_response(
         video_ready_event(video_hash),
