@@ -99,16 +99,16 @@ async def video_ready_event(video_hash):
         msg = await sub.next_msg(None)
         subject, received_hash = msg.subject, msg.data.decode()
         if subject == nats_cb_subject and received_hash == video_hash:
-            yield f'data: video_hash\n\n'
+            yield f'data: {video_hash}\n\n'
+            break
 
-# Adapted from https://stackoverflow.com/questions/12232304/how-to-implement-server-push-in-flask-framework
+# Adapted from https://pgjones.gitlab.io/quart/how_to_guides/server_sent_events.html#server-sent-events
 @app.route('/notification/<video_hash>')
 async def notification(video_hash):
     response = await make_response(
         video_ready_event(video_hash),
         { 'Content-Type': 'text/event-stream' }
     )
-
     response.timeout = None
     return response
 
