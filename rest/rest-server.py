@@ -2,13 +2,12 @@ import base64
 import hashlib
 import io
 import os
-import asyncio
 import json
 from nats.aio.client import Client as NATS
-from flask import Flask, request, send_file
+from quart import Quart, request, make_response, send_file
 from minio import Minio
 
-app = Flask(__name__)
+app = Quart(__name__)
 
 # Two buckets exist: 1) input, 2) output
 minio_host = os.getenv('MINIO_HOST') or 'localhost:9000'
@@ -24,6 +23,7 @@ minio_client = Minio(
 nats_host = os.getenv('NATS_HOST') or 'localhost'
 nats_queue = os.getenv('NATS_QUEUE') or 'worker'
 nats_subject = 'trim'
+nats_cb_subject = 'video_ready'
 nats_logs_subject = 'logs'
 
 rest_port = os.getenv('REST_PORT') or 5000
@@ -51,7 +51,7 @@ async def root():
 async def trim():
     await init_nats_client()
     # Handling request data
-    data: dict = request.json or {}
+    data: dict = await request.json or {}
     mp4 = base64.b64decode(data.get('mp4', ''))
 
     # TODO: Operation and Operation Args Validation
@@ -91,6 +91,26 @@ def remove(video_hash):
 
     minio_client.remove_object(bucket_name, object_name)
     return { 'status': 'successful', 'reason': f'video {video_hash} deleted' }
+
+async def video_ready_event(video_hash):
+    await init_nats_client()
+    sub = await nats_client.subscribe(nats_cb_subject)
+    while True:
+        msg = await sub.next_msg(None)
+        subject, received_hash = msg.subject, msg.data.decode()
+        if subject == nats_cb_subject and received_hash == video_hash:
+            yield f'data: video_hash\n\n'
+
+# Adapted from https://stackoverflow.com/questions/12232304/how-to-implement-server-push-in-flask-framework
+@app.route('/notification/<video_hash>')
+async def notification(video_hash):
+    response = await make_response(
+        video_ready_event(video_hash),
+        { 'Content-Type': 'text/event-stream' }
+    )
+
+    response.timeout = None
+    return response
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=int(rest_port))

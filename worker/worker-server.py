@@ -25,6 +25,7 @@ logger.info('minio setup done')
 nats_host = os.getenv('NATS_HOST') or 'localhost'
 nats_queue = os.getenv('NATS_QUEUE') or 'worker'
 nats_subject = 'trim'
+nats_cb_subject = 'video_ready'
 
 async def main():
     # callbacks
@@ -60,6 +61,7 @@ async def main():
             vw.fetch_video(message["video_hash"])
             vw.process_video(message["operations"])
             vw.put_video()
+            await nc.publish(nats_cb_subject, message['video_hash'].encode())
 
 if __name__ == '__main__':
     try:
