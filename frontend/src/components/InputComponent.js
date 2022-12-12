@@ -41,19 +41,15 @@ const InputComponent = (props) => {
     const onChange = (operation_name, key, event) => {
         const selectedOperationsCopy = Object.assign({}, selectedOperations);
         selectedOperationsCopy[operation_name]['operation_args'][key] = event.target.value;
-        console.log(selectedOperations);
         setSelectedOperations(selectedOperationsCopy);
-        console.log(selectedOperations);
         updateParentState();
     }
 
     const onCheckToggle = (operation_name) => {
         const selectedOperationsCopy = Object.assign({}, selectedOperations);
         selectedOperationsCopy[operation_name]['isChecked'] = !selectedOperationsCopy[operation_name]['isChecked'];
-        console.log(selectedOperations);
         
         setSelectedOperations(selectedOperationsCopy);
-        console.log(selectedOperations)
         updateParentState();
     }
 
@@ -68,7 +64,6 @@ const InputComponent = (props) => {
             }
         })
         props.onInputChange(parentState)
-        console.log(parentState)
     }
 
     const renderOperationInput = (operation_name, operation) => (
