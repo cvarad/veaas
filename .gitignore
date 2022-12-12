@@ -2,5 +2,6 @@ venv/
 data/
 build/
 rest/build
+node_modules/
 __pycache__/
 .idea

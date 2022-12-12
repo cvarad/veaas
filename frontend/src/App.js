@@ -33,6 +33,7 @@ class App extends Component {
         const eventSource = new EventSource("/apiv1/notification/" + response.data.hash)
         eventSource.onmessage = () => {
           this.setState({ isDownloadReady: true });
+          eventSource.close()
         };
       });
 
