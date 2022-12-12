@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: veaas-worker
-        image: hunarjain09/veaas-worker
+        image: cvarad/veaas-worker
         # resources:
         #   requests:
         #     cpu: 1000m

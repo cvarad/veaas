@@ -2,15 +2,14 @@ import base64
 import hashlib
 import io
 import os
-import asyncio
 import json
 from nats.aio.client import Client as NATS
-from flask import Flask, request, send_file
+from quart import Quart, request, make_response, send_file
 from minio import Minio
-from flask_cors import CORS
+from quart_cors import cors
 
-app = Flask(__name__)
-CORS(app)
+app = Quart(__name__)
+app = cors(app)
 
 # Two buckets exist: 1) input, 2) output
 minio_host = os.getenv('MINIO_HOST') or 'localhost:9000'
@@ -26,6 +25,7 @@ minio_client = Minio(
 nats_host = os.getenv('NATS_HOST') or 'localhost'
 nats_queue = os.getenv('NATS_QUEUE') or 'worker'
 nats_subject = 'trim'
+nats_cb_subject = 'video_ready'
 nats_logs_subject = 'logs'
 
 rest_port = os.getenv('REST_PORT') or 5000
@@ -52,11 +52,13 @@ async def root():
 @app.route('/apiv1/operation', methods=['POST'])
 async def operation():
     await init_nats_client()
+    request_files = await request.files
     # Handling request data
     data = {
-        "operations": json.loads(request.files['operations'].read().decode()),
+        "operations": json.loads(request_files['operations'].read().decode()),
     }
-    mp4 = request.files['file'].read()
+    mp4 = request_files['file'].read()
+
 
     # TODO: Operation and Operation Args Validation
 
@@ -95,6 +97,26 @@ def remove(video_hash):
 
     minio_client.remove_object(bucket_name, object_name)
     return { 'status': 'successful', 'reason': f'video {video_hash} deleted' }
+
+async def video_ready_event(video_hash):
+    await init_nats_client()
+    sub = await nats_client.subscribe(nats_cb_subject)
+    while True:
+        msg = await sub.next_msg(None)
+        subject, received_hash = msg.subject, msg.data.decode()
+        if subject == nats_cb_subject and received_hash == video_hash:
+            yield f'data: {video_hash}\n\n'
+            break
+
+# Adapted from https://pgjones.gitlab.io/quart/how_to_guides/server_sent_events.html#server-sent-events
+@app.route('/notification/<video_hash>')
+async def notification(video_hash):
+    response = await make_response(
+        video_ready_event(video_hash),
+        { 'Content-Type': 'text/event-stream' }
+    )
+    response.timeout = None
+    return response
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=int(rest_port))
