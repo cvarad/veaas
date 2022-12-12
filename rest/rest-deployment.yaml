@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: rest
-        image: hunarjain09/rest
+        image: cvarad/rest
         resources:
           requests:
             cpu: 100m
@@ -35,4 +35,3 @@ spec:
             value: "my-nats"
           - name: REST_PORT
             value: "5000"
-          

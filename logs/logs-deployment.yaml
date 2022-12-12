@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: logs
-        image: hunarjain09/logs:v1
+        image: cvarad/logs
         resources:
           requests:
             cpu: 100m

@@ -1,5 +1,5 @@
 VERSION=v2
-DOCKERUSER=hunarjain09
+DOCKERUSER=cvarad
 
 build:
 	docker build -f Dockerfile-rest -t rest .

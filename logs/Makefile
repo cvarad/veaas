@@ -1,5 +1,5 @@
 VERSION=v1
-DOCKERUSER=hunarjain09
+DOCKERUSER=cvarad
 
 #
 # You should probably update the docker.io user if you update this
