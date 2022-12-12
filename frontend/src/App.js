@@ -30,7 +30,7 @@ class App extends Component {
 
     console.log(this.state.selectedOperations)
 
-    axios.post("http://localhost:5000/apiv1/operation", formData);
+    axios.post("/apiv1/operation", formData);
 
   };
 

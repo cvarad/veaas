@@ -8,7 +8,7 @@ from quart import Quart, request, make_response, send_file
 from minio import Minio
 from quart_cors import cors
 
-app = Quart(__name__, static_folder='../frontend/build', static_url_path='/')
+app = Quart(__name__, static_folder='build', static_url_path='/')
 app = cors(app)
 
 # Two buckets exist: 1) input, 2) output
@@ -28,7 +28,7 @@ nats_subject = 'trim'
 nats_cb_subject = 'video_ready'
 nats_logs_subject = 'logs'
 
-rest_port = os.getenv('REST_PORT') or 5000
+rest_port = os.getenv('REST_PORT') or 5001
 
 
 # Initializing empty MINIO buckets if necessary
@@ -105,6 +105,7 @@ async def video_ready_event(video_hash):
         msg = await sub.next_msg(None)
         subject, received_hash = msg.subject, msg.data.decode()
         if subject == nats_cb_subject and received_hash == video_hash:
+            print(f'Video Event ready for {video_hash}')
             yield f'data: {video_hash}\n\n'
             break
 
