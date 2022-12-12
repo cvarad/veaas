@@ -18,26 +18,26 @@ class VideoWorker:
         self.minio.fget_object(self.in_bucket, video_hash, self.file_path)
         return self.file_path
 
-    # Hardcoded trim operation. Need to decide a data format. JSON example:
-    # {"operation": "trim", "args": {"start": 1, "end": 4}}
-    def process_video(self,operations):
+    def process_video(self, operations):
         self.out_path = f'/tmp/{self.video_hash}_out.mp4'
         input = ffmpeg.input(self.file_path)
         for dic in operations:
+            args = dic['operation_args']
             if dic['operation'] == 'trim':
-                input = ffmpeg.trim(input,start=dic['operation_args']['start_time'], end=dic['operation_args']['end_time'])
-            if dic['operation'] == 'hflip':
+                input = ffmpeg.trim(
+                    input, start=args['start_time'], end=args['end_time'])
+            elif dic['operation'] == 'hflip':
                 input = ffmpeg.hflip(input)
-            if dic['operation'] == 'vflip':
+            elif dic['operation'] == 'vflip':
                 input = ffmpeg.vflip(input)
-            if dic['operation'] == 'drawbox':
-                color = dic['operation_args']['color'] or 'red'
-                thickness = dic['operation_args']['thickness'] or 5
-                input = ffmpeg.drawbox(input,dic['operation_args']['x'],dic['operation_args']['y'],dic['operation_args']['width'],dic['operation_args']['height'],
-                color=color,thickness=thickness)
-        input = ffmpeg.setpts(input,'PTS-STARTPTS')
-        input = ffmpeg.output(input,self.out_path)
-        ffmpeg.run(input,overwrite_output=True)
+            elif dic['operation'] == 'drawbox':
+                color = args['color'] or 'red'
+                thickness = args['thickness'] or 5
+                input = ffmpeg.drawbox(
+                    input, args['x'], args['y'], args['width'], args['height'], color=color, thickness=thickness)
+        input = ffmpeg.setpts(input, 'PTS-STARTPTS')
+        input = ffmpeg.output(input, self.out_path)
+        ffmpeg.run(input, overwrite_output=True)
 
     def put_video(self):
         self.minio.fput_object(self.out_bucket, self.video_hash, self.out_path)

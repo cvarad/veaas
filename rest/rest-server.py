@@ -1,15 +1,13 @@
-import base64
 import hashlib
 import io
 import os
 import json
 from nats.aio.client import Client as NATS
-from quart import Quart, request, make_response, send_file
+from quart import Quart, request, make_response, send_file, send_from_directory
 from minio import Minio
-from quart_cors import cors
 
 app = Quart(__name__, static_folder='build', static_url_path='/')
-app = cors(app)
+app.config['MAX_CONTENT_LENGTH'] = 128 * 1024 * 1024
 
 # Two buckets exist: 1) input, 2) output
 minio_host = os.getenv('MINIO_HOST') or 'localhost:9000'
@@ -24,7 +22,7 @@ minio_client = Minio(
 
 nats_host = os.getenv('NATS_HOST') or 'localhost'
 nats_queue = os.getenv('NATS_QUEUE') or 'worker'
-nats_subject = 'trim'
+nats_subject = 'operation'
 nats_cb_subject = 'video_ready'
 nats_logs_subject = 'logs'
 
@@ -46,7 +44,7 @@ async def init_nats_client():
 
 @app.route('/', methods=['GET'])
 async def root():
-    return 'Use the /apiv1/ API'
+    return await send_from_directory(app.static_folder, 'index.html')
 
 # Defining /apiv1/trim API
 @app.route('/apiv1/operation', methods=['POST'])
@@ -65,10 +63,10 @@ async def operation():
     video_hash = hashlib.md5(mp4).hexdigest()
     minio_client.put_object(minio_input_bucket, video_hash, io.BytesIO(mp4), len(mp4))
     print(data)
-    message = { 
-                'video_hash':video_hash,
-                'operations': data['operations'],
-            }
+    message = {
+        'video_hash': video_hash,
+        'operations': data['operations'],
+    }
     
     await nats_client.publish(nats_subject, json.dumps(message).encode())
     await nats_client.publish(nats_logs_subject, json.dumps(message).encode())

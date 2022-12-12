@@ -24,7 +24,7 @@ logger.info('minio setup done')
 
 nats_host = os.getenv('NATS_HOST') or 'localhost'
 nats_queue = os.getenv('NATS_QUEUE') or 'worker'
-nats_subject = 'trim'
+nats_subject = 'operation'
 nats_cb_subject = 'video_ready'
 
 async def main():
