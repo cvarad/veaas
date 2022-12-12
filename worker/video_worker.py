@@ -32,7 +32,7 @@ class VideoWorker:
                 input = ffmpeg.vflip(input)
             if dic['operation'] == 'drawbox':
                 color = dic['operation_args']['color'] or 'red'
-                thickness = dic['operation_args']['color'] or 5
+                thickness = dic['operation_args']['thickness'] or 5
                 input = ffmpeg.drawbox(input,dic['operation_args']['x'],dic['operation_args']['y'],dic['operation_args']['width'],dic['operation_args']['height'],
                 color=color,thickness=thickness)
         input = ffmpeg.setpts(input,'PTS-STARTPTS')

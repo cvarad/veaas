@@ -6,8 +6,10 @@ import json
 from nats.aio.client import Client as NATS
 from quart import Quart, request, make_response, send_file
 from minio import Minio
+from quart_cors import cors
 
-app = Quart(__name__)
+app = Quart(__name__, static_folder='../frontend/build', static_url_path='/')
+app = cors(app)
 
 # Two buckets exist: 1) input, 2) output
 minio_host = os.getenv('MINIO_HOST') or 'localhost:9000'
@@ -48,11 +50,15 @@ async def root():
 
 # Defining /apiv1/trim API
 @app.route('/apiv1/operation', methods=['POST'])
-async def trim():
+async def operation():
     await init_nats_client()
+    request_files = await request.files
     # Handling request data
-    data: dict = await request.json or {}
-    mp4 = base64.b64decode(data.get('mp4', ''))
+    data = {
+        "operations": json.loads(request_files['operations'].read().decode()),
+    }
+    mp4 = request_files['file'].read()
+
 
     # TODO: Operation and Operation Args Validation
 
