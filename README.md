@@ -1,1 +1,1 @@
-# veaas (Video Editing As A Service)
+# VEaaS (Video Editing As A Service)
