@@ -1,8 +1,8 @@
 VERSION=v3
-DOCKERUSER=hunarjain09
+DOCKERUSER=cvarad
 
 build:
-	docker build -f Dockerfile-rest -t rest .
+	docker build -f Dockerfile -t rest .
 
 push:
 	docker tag rest $(DOCKERUSER)/rest:$(VERSION)

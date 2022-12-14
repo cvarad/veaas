@@ -1,5 +1,5 @@
 VERSION=v3
-DOCKERUSER=hunarjain09
+DOCKERUSER=cvarad
 
 build:
 	docker build -f Dockerfile -t veaas-worker .
